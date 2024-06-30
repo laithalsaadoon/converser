@@ -9,13 +9,13 @@ from mypy_boto3_bedrock_runtime.type_defs import (
     MessageTypeDef,
     SystemContentBlockTypeDef,
 )
-from typing import Any, Dict, Generator, Optional, cast
+from typing import Any, Dict, Generator, List, Optional, cast
 
 
 def stream_messages(
     client: BedrockRuntimeClient,
     model_id: ModelId,
-    message: MessageTypeDef,
+    messages: List[MessageTypeDef],
     system_prompt: Optional[SystemContentBlockTypeDef] = None,
     memory: Optional[Memory] = None,
     inference_config: InferenceConfig = InferenceConfig(),
@@ -23,10 +23,10 @@ def stream_messages(
 ) -> Generator[Dict[str, Any], None, None]:
     """Stream messages to the model."""
     if memory:
-        memory.add_message(message)
+        memory.add_messages(messages)
         messages = memory.get_history()
     else:
-        messages = [message]
+        messages = messages
 
     response: ConverseStreamResponseTypeDef = client.converse_stream(
         modelId=model_id.value,
@@ -62,3 +62,9 @@ def stream_messages(
                 complete_message = []
             case None:
                 raise ValueError('Invalid event type')
+
+    if memory:
+        memory.add_messages([{'role': 'assistant', 'content': complete_message}])
+        messages = memory.get_history()
+    else:
+        messages = messages

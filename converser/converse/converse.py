@@ -4,6 +4,7 @@ from converser.conversation_memory import Memory
 from converser.models import InferenceConfig, ModelId
 from converser.streaming import stream_messages
 from converser.utils import get_bedrock_client
+from converser.utils.helpers import sanitize_file_name
 from functools import partial
 from mypy_boto3_bedrock_runtime import BedrockRuntimeClient
 from mypy_boto3_bedrock_runtime.literals import (
@@ -20,6 +21,7 @@ from mypy_boto3_bedrock_runtime.type_defs import (
 )
 from pathlib import Path
 from typing import (
+    List,
     Literal,
     Optional,
     Sequence,
@@ -57,20 +59,20 @@ class Converse:
         self.inference_config = inference_config
         self.stream_messages = partial(stream_messages, **self.__dict__)
 
-    def send_message(self, message: MessageTypeDef) -> ConverseResponseTypeDef:
+    def send_messages(self, messages: List[MessageTypeDef]) -> ConverseResponseTypeDef:
         """Send a message to the model.
 
         Args:
-            message (MessageTypeDef): The message to send.
+            messages (MessageTypeDef): The messages to send.
 
         Returns:
             ConverseResponseTypeDef: The response from the model.
         """
         if self.memory:
-            self.memory.add_message(message)
+            self.memory.add_messages(messages)
             messages = self.memory.get_history()
         else:
-            messages = [message]
+            messages = messages
 
         response: ConverseResponseTypeDef = self.client.converse(
             modelId=self.model_id.value,
@@ -89,7 +91,7 @@ class Converse:
                         'role': 'assistant',
                         'content': content,
                     }
-                    self.memory.add_message(assistant_message)
+                    self.memory.add_messages([assistant_message])
             # default case
             case _:
                 raise NotImplementedError(
@@ -99,20 +101,24 @@ class Converse:
         return response
 
     def from_file(
-        self, file_path: str, content_type: Literal['image', 'document']
+        self,
+        file_path: str,
+        content_type: Literal['image', 'document'],
+        user_text: str = 'Please describe the contents of the file in detail',
     ) -> ConverseResponseTypeDef:
         """Create a message from a file.
 
         Args:
             file_path (str): The path to the file.
             content_type (Literal['image', 'document']): The type of content in the file.
+            user_text (Optional[str], optional): The user text to include with the file. Defaults to None.
 
         Returns:
             ConverseResponseTypeDef: The response from the model.
 
         Raises:
             ValueError: If the document format or image format is unsupported.
-        """
+        """  # noqa: E501
         with open(file_path, 'rb') as file:
             content_bytes = file.read()
 
@@ -123,17 +129,16 @@ class Converse:
         if content_type == 'document' and file_extension not in get_args(DocumentFormatType):
             # handle invalid document format
             raise ValueError(f'Invalid document format for file: {file_path}')
-
-            # rest of the code...
-            raise ValueError(f'Unsupported document format: {file_extension}')
         if content_type == 'image' and file_extension not in get_args(ImageFormatType):
             raise ValueError(f'Unsupported image format: {file_extension}')
+
+        document_name: str = sanitize_file_name(file_path)
 
         if content_type == 'document':
             content_block = {
                 'document': {
                     'format': file_extension,  # type: ignore
-                    'name': file_path,
+                    'name': document_name,
                     'source': {'bytes': content_bytes},
                 }
             }
@@ -147,4 +152,8 @@ class Converse:
         else:
             raise ValueError('Unsupported content type')
 
-        return self.send_message({'role': 'user', 'content': [content_block]})
+        user_message: MessageTypeDef = {
+            'role': 'user',
+            'content': [{'text': user_text}, content_block],
+        }
+        return self.send_messages([user_message])
