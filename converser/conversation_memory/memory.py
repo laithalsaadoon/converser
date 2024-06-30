@@ -11,14 +11,14 @@ class Memory:
         """Initialize the Memory class."""
         self.history: List[Union[MessageTypeDef, MessageOutputTypeDef]] = []
 
-    def add_message(self, message: Union[MessageTypeDef, MessageOutputTypeDef]) -> None:
+    def add_messages(self, messages: List[Union[MessageTypeDef, MessageOutputTypeDef]]) -> None:
         """Add a message to the history."""
-        if not self._is_valid_message_order(message):
+        if not self._is_valid_message_order(messages):
             raise ValueError(
                 'Invalid message order. Messages must start with a user message and alternate'
                 'between user and assistant.'
             )
-        self.history.append(message)
+        self.history.extend(messages)
 
     def get_history(self) -> List[Union[MessageTypeDef, MessageOutputTypeDef]]:
         """Get the message history."""
