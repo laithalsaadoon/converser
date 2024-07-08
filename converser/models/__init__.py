@@ -1,9 +1,8 @@
 """Base models for converser."""
 
-from .models import InferenceConfig, ModelId
+from .models import InferenceConfig
 
 
 __all__ = [
     'InferenceConfig',
-    'ModelId',
 ]

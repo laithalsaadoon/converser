@@ -21,19 +21,21 @@ project = PythonProject(
         'pydantic',
         'requests',
         'tqdm',
+        "boto3-stubs@{version = '*', extras = ['bedrock-runtime', 'bedrock']}",
     ],
     dev_deps=[
+        'beautifulsoup4',
+        'jinja2',
         'ruff',
         'bandit',
         'mypy',
         'pytest',
         'pytest-cov',
-        "boto3-stubs@{version = '1.34.131', extras = ['bedrock-runtime']}",
     ],
 )
 
-pyproject_toml = project.try_find_object_file('pyproject.toml')
-
+if (pyproject_toml := project.try_find_object_file('pyproject.toml')) is None:
+    raise ValueError('pyproject.toml not found')
 
 tool_ruff = pyproject_toml.add_override(
     'tool.ruff',
@@ -81,5 +83,11 @@ tool_ruff_format = pyproject_toml.add_override(
         'docstring-code-format': True,
     },
 )
+
+project.add_task('lint', exec='poetry run ruff check . --verbose $@', receive_args=True)
+project.add_task('format', exec='poetry run ruff format .')
+
+if (test_task := project.tasks.try_find('test')) is not None:
+    test_task.reset('poetry run pytest $@', receive_args=True)
 
 project.synth()

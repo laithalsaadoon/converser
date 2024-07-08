@@ -1,0 +1,33 @@
+"""Models and their functionality using Converse."""
+
+from typing import TypedDict
+
+
+class ModelConfig(TypedDict):
+    """A dictionary containing the results of the functionality checks."""
+
+    model_name: str
+    model_id: str
+    converse: bool
+    converse_stream: bool
+    system_prompts: bool
+    document_chat: bool
+    vision: bool
+    tool_use: bool
+    streaming_tool_use: bool
+    guardrails: bool
+
+{% for model in models %}
+{{ model["model_id"].upper().replace('.', '_').replace('-', '_').replace(':', "_") }}: ModelConfig = {
+    "model_name": "{{ model["model_name"] }}",
+    "model_id": "{{ model["model_id"] }}",
+    "converse": {{ model["converse"] }},
+    "converse_stream": {{ model["converse_stream"] }},
+    "system_prompts": {{ model["system_prompts"] }},
+    "document_chat": {{ model["document_chat"] }},
+    "vision": {{ model["vision"] }},
+    "tool_use": {{ model["tool_use"] }},
+    "streaming_tool_use": {{ model["streaming_tool_use"] }},
+    "guardrails": {{ model["guardrails"] }},
+}
+{% endfor %}
