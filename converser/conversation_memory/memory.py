@@ -1,7 +1,7 @@
 """Memory class."""
 
-from mypy_boto3_bedrock_runtime.type_defs import MessageOutputTypeDef, MessageTypeDef
-from typing import List, Union
+from mypy_boto3_bedrock_runtime.type_defs import MessageUnionTypeDef
+from typing import List
 
 
 class Memory:
@@ -9,30 +9,40 @@ class Memory:
 
     def __init__(self) -> None:
         """Initialize the Memory class."""
-        self.history: List[Union[MessageTypeDef, MessageOutputTypeDef]] = []
+        self.history: List[MessageUnionTypeDef] = []
 
-    def add_messages(self, messages: List[Union[MessageTypeDef, MessageOutputTypeDef]]) -> None:
+    def add_messages(self, messages: List[MessageUnionTypeDef]) -> None:
         """Add a message to the history."""
-        if not self._is_valid_message_order(messages):
+        if not self._is_valid_message_history_order(messages):
             raise ValueError(
                 'Invalid message order. Messages must start with a user message and alternate'
-                'between user and assistant.'
+                ' between user and assistant.'
             )
         self.history.extend(messages)
 
-    def get_history(self) -> List[Union[MessageTypeDef, MessageOutputTypeDef]]:
+    def get_history(self) -> List[MessageUnionTypeDef]:
         """Get the message history."""
         return self.history
 
-    def _is_valid_message_order(
-        self, new_message: Union[MessageTypeDef, MessageOutputTypeDef]
-    ) -> bool:
-        if not self.history:
-            return new_message['role'] == 'user'
-        last_message = self.history[-1]
-        return last_message['role'] != new_message['role']
+    def _is_valid_message_history_order(self, new_messages: List[MessageUnionTypeDef]) -> bool:
+        """Check if the new messages have a valid order.
 
-    def get_last_message(self) -> Union[MessageTypeDef, MessageOutputTypeDef]:
+        Messages must start with a user message and alternate
+        between user and assistant.
+        """
+        message_history = self.get_history() + new_messages
+        if message_history[0].get('role') != 'user':
+            return False
+
+        for i, message in enumerate(message_history[1:], start=1):
+            if i % 2 == 0 and message.get('role') != 'user':
+                return False
+            if i % 2 == 1 and message.get('role') != 'assistant':
+                return False
+
+        return True
+
+    def get_last_message(self) -> MessageUnionTypeDef:
         """Get the last message in the history."""
         return self.history[-1]
 

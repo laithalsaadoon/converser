@@ -81,6 +81,14 @@
         }
       ]
     },
+    "format": {
+      "name": "format",
+      "steps": [
+        {
+          "exec": "poetry run ruff format ."
+        }
+      ]
+    },
     "install": {
       "name": "install",
       "description": "Install dependencies and update lockfile",
@@ -96,6 +104,15 @@
       "steps": [
         {
           "exec": "poetry check --lock && poetry install"
+        }
+      ]
+    },
+    "lint": {
+      "name": "lint",
+      "steps": [
+        {
+          "exec": "poetry run ruff check . --verbose $@",
+          "receiveArgs": true
         }
       ]
     },
@@ -139,7 +156,8 @@
       "description": "Run tests",
       "steps": [
         {
-          "exec": "pytest"
+          "exec": "poetry run pytest $@",
+          "receiveArgs": true
         }
       ]
     }
